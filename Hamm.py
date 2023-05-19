@@ -43,12 +43,13 @@ class TV:
     def insertbranch(self, transaction, brau):
         currentnode = self.root
         utilities = np.array([item_u[0] for item_u in transaction])
+        twu = sum(utilities)
         ru = 0
         for item_u in transaction:
             item = item_u[1]
             
             self.HeaderTable[item]['ru'] += ru
-            self.HeaderTable[item]['twu'] += sum(utilities)+brau
+            self.HeaderTable[item]['twu'] += twu+brau
             ru += item_u[0]
             if item not in currentnode.childrennames:
                 newnode = Node(item,brau,np.zeros(1),0,currentnode)
@@ -68,6 +69,8 @@ class TV:
             currentnode.upos = currentnode.upos+utilities
                 
 def construct_(tv, x, minutil):
+    if x == 'b':
+        is_here = 1
     HeaderTable = {}
     
     #build conditional transaction database and build HeaderTable
@@ -78,7 +81,7 @@ def construct_(tv, x, minutil):
         trans = [node.upos[-1]+node.brau]
         currentnode = node
         idx = -1
-        twu = sum(node.upos)
+        twu = sum(node.upos)+node.brau
         while currentnode.parent.item != 'root':
             idx = idx - 1
             
@@ -153,6 +156,7 @@ def construct(db, minutil):
     SList = [item for _, item in sorted(zip(twus, items), reverse = True)]
     
     items = list(HeaderTable.keys())[:]
+    
     #initialize TV.HT, TV.T and TV.P
     
     T = Node('root',0,np.zeros(1),0,0)
@@ -211,4 +215,13 @@ test = [[(4,'a'),(2,'b'),(6,'c')],
         [(1,'d'),(1,'e')]
         ]
 
-getHup(test,0)
+test2 = [[(2,'a'),(2,'b'),(4,'c'),(2,'d')],
+        [(4,'b')],
+        [(2,'a'),(4,'b'),(1,'d')],
+        [(2,'c')],
+        [(2,'a')],
+        [(4,'a'),(2,'c'),(3,'d')],
+        [(2,'a'),(2,'b'),(6,'c')]
+        ]
+
+getHup(test2,9)
