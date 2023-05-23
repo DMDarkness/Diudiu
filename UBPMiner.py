@@ -10,27 +10,33 @@ import itertools
 def initialList(db, minutil):
     HeaderTable = {}
     for i in range(len(db)):
+        if i%1000 == 0:
+            print(i)
         twu = sum([item_u[0] for item_u in db[i]])
         for item_u in db[i]:
             item = item_u[1]
             utility = item_u[0]
             if item not in HeaderTable.keys():
                 HeaderTable[item] = {'pat':(item,),
-                                    'tidset':0, 
+                                    'tidset':np.zeros(len(db)).astype(bool), 
                                      'twu':twu, 
                                      'utility': utility, 
-                                     'ru':0, 
-                                     'list':{}}
+                                     'ru':0,
+                                     'transN':1,
+                                     'len':0,
+                                     'list':[]}
             else:
                 HeaderTable[item]['twu'] += twu
                 HeaderTable[item]['utility'] += utility
-                
-    ECUS = {}
+                HeaderTable[item]['transN'] += 1
     
     items = list(HeaderTable.keys())[:]
     for item in items:
         if HeaderTable[item]['twu']<minutil:
             del HeaderTable[item]
+        else:
+            HeaderTable[item]['list'] = np.zeros((HeaderTable[item]['transN'], 3)).astype(int)
+            HeaderTable[item]['len'] = HeaderTable[item]['transN']
             
     items = list(HeaderTable.keys())[:]
     twus = [HeaderTable[item]['twu'] for item in items]
@@ -38,6 +44,8 @@ def initialList(db, minutil):
     items = list(HeaderTable.keys())[:]
     
     for i in range(len(db)):
+        if i%1000 == 0:
+            print(i)
         transaction = db[i]
         transaction = list(filter(lambda x: x[1] in items, transaction))
         twus = [HeaderTable[item_u[1]]['twu'] for item_u in transaction]
@@ -46,10 +54,15 @@ def initialList(db, minutil):
         for item_u in transaction:
             item = item_u[1]
             utility = item_u[0]
-            HeaderTable[item]['tidset'] += 2**i
+            HeaderTable[item]['tidset'][i] =  True
             HeaderTable[item]['ru'] += ru
             ru += utility
-            HeaderTable[item]['list'][i] = ([utility,ru,])
+            idx = HeaderTable[item]['len'] - HeaderTable[item]['transN']
+            HeaderTable[item]['list'][idx, 0] = utility
+            HeaderTable[item]['list'][idx, 1] = ru
+            HeaderTable[item]['list'][idx, 2] = i
+            HeaderTable[item]['transN'] -= 1
+            
             
     return HeaderTable, SList
 
@@ -62,20 +75,16 @@ def ConstructUBP(P, Px, Py):
              'list':{}}
     
     ubpxy['tidset'] = Px['tidset'] & Py['tidset']
-    ubpxybin = bin(ubpxy['tidset'])[2:]
-    ubpxytids = filter(lambda x: ubpxybin[::-1][x] == '1', range(len(ubpxybin)))
-    for tid in ubpxytids:
-        Ex = Px['list'][tid]
-        Ey = Py['list'][tid]
-        E0 = 0
-        if len(P) > 0:
-            E = P['list'][tid]
-            E0 = E[0]
-        
-        Exy = (Ex[0] + Ey[0] - E0 ,Ey[1])
-        ubpxy['list'][tid] = Exy
-        ubpxy['utility'] += Exy[0]
-        ubpxy['ru'] += Exy[1]
+    if sum(ubpxy['tidset']) > 0:
+        PxTrans = Px['list'][ubpxy['tidset'][Px['list'][:,2]]]
+        PyTrans = Py['list'][ubpxy['tidset'][Py['list'][:,2]]]
+        ubpxy['list'] = PyTrans
+        ubpxy['list'][:,0] = ubpxy['list'][:,0] +PxTrans[:,0]
+        if len(P)>0:
+            PTrans = P['list'][ubpxy['tidset'][P['list'][:,2]]]
+            ubpxy['list'][:,0] = ubpxy['list'][:,0] - PTrans[:,0]
+        ubpxy['utility'] = sum(ubpxy['list'][:,0])
+        ubpxy['ru'] = sum(ubpxy['list'][:,1])
     
     return ubpxy
 
@@ -119,4 +128,10 @@ test2 = [[(2,'a'),(2,'b'),(4,'c'),(2,'d')],
         [(2,'a'),(2,'b'),(6,'c')]
         ]
 
-UBPMiner(test, 9)
+test3 = [[(5,'a'),(1,'c'),(2,'d')],
+         [(10,'a'),(6,'c'),(6,'e'),(5,'g')],
+         [(5,'a'),(4,'b'),(1,'c'),(12,'d'),(3,'e'),(5,'f')],
+         [(8,'b'),(3,'c'),(6,'d'),(3,'e')],
+         [(4,'b'),(2,'c'),(3,'e'),(2,'g')]]
+
+UBPMiner(test2,9)
