@@ -33,7 +33,6 @@ def RecusiveSearch(alpha, alphaD, HeaderTable, ni, fi, minutil):
                 elif item_ in fi:
                     utility = trans[item_idx][0] + prUit
                     
-                    #HeaderTable_[item_]['slocU'] += (trans[item_idx + 1][1] != item)*ru
                     HeaderTable_[item_]['ssubU'] += utility + ru
                     HeaderTable_[item_]['utility'] += utility
                     HeaderTable_[item_]['proD'].append((utility, idx_))
@@ -43,7 +42,8 @@ def RecusiveSearch(alpha, alphaD, HeaderTable, ni, fi, minutil):
             if item_idx > 0:
                 for item_idx_ in range(item_idx-1):
                     item_ = trans[item_idx_][1]
-                    HeaderTable_[item_]['slocU'] += ru
+                    if item_ in fi:
+                        HeaderTable_[item_]['slocU'] += prUit + ru
         
         fibeta = list(filter(lambda x: HeaderTable_[x]['slocU'] >= minutil, fi))
         nibeta = list(filter(lambda x: HeaderTable_[x]['ssubU'] >= minutil, fi))
@@ -93,7 +93,6 @@ def HUI_PR(db, minutil):
         
         ru = 0
         for item_u in db[i]:
-            ru = 0
             item = item_u[1]
             utility = item_u[0]
             HeaderTable[item]['subU'] += ru
@@ -133,4 +132,4 @@ test3 = [[(5,'a'),(1,'c'),(2,'d')],
          [(8,'b'),(3,'c'),(6,'d'),(3,'e')],
          [(4,'b'),(2,'c'),(3,'e'),(2,'g')]]
 
-HUI_PR(test3*200000, 1)      
+HUI_PR(test3, 25)      
