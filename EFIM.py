@@ -5,6 +5,8 @@ Created on Fri May 26 22:41:23 2023
 @author: 张中杰
 """
 
+HUPs = []
+
 def Search(alpha, alphaD, HeaderTable, primary, secondary, minutil):
     for item in reversed(primary):
         beta = alpha + [item]
@@ -20,7 +22,7 @@ def Search(alpha, alphaD, HeaderTable, primary, secondary, minutil):
                                 'proD': []}
         
         if HeaderTable[item]['utility'] >= minutil:
-            print(beta,HeaderTable[item]['utility'])
+            HUPs.append((beta,HeaderTable[item]['utility']))
         
         for idx in HeaderTable[item]['proD']:
             #prUit is the utility of the prefix itemset in this transaction
@@ -56,7 +58,9 @@ def Search(alpha, alphaD, HeaderTable, primary, secondary, minutil):
         primarybeta = list(filter(lambda x: HeaderTable_[x]['subU'] >= minutil, secondary))
         Search(beta, alphaD, HeaderTable_, primarybeta, secondarybeta, minutil)
 
-def EFIM(db, minutil):
+def getHup(db, minutil):
+    HUPs.clear()
+    
     #initialize the Counter to record locU, utility and subU of every item
     HeaderTable = {}
     
@@ -114,29 +118,3 @@ def EFIM(db, minutil):
             
     #recusive mining the high utility itemset
     Search([], db, HeaderTable, primary, secondary, minutil)
-
-test = [[(4,'a'),(2,'b'),(6,'c')],
-        [(4,'a'),(2,'b'),(3,'c'),(1,'d')],
-        [(2,'b'),(1,'d'),(1,'e')],
-        [(1,'d'),(1,'e')],
-        [(2,'a'),(4,'b'),(2,'e')],
-        [(6,'a')],
-        [(1,'d'),(1,'e')]
-        ]
-
-test2 = [[(2,'a'),(2,'b'),(4,'c'),(2,'d')],
-        [(4,'b')],
-        [(2,'a'),(4,'b'),(1,'d')],
-        [(2,'c')],
-        [(2,'a')],
-        [(4,'a'),(2,'c'),(3,'d')],
-        [(2,'a'),(2,'b'),(6,'c')]
-        ]
-
-test3 = [[(5,'a'),(1,'c'),(2,'d')],
-         [(10,'a'),(6,'c'),(6,'e'),(5,'g')],
-         [(5,'a'),(4,'b'),(1,'c'),(12,'d'),(3,'e'),(5,'f')],
-         [(8,'b'),(3,'c'),(6,'d'),(3,'e')],
-         [(4,'b'),(2,'c'),(3,'e'),(2,'g')]]
-
-EFIM(test3, 25)  
