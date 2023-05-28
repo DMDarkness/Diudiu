@@ -7,6 +7,8 @@ Created on Fri May 12 21:34:38 2023
 
 import numpy as np
 
+HUPs = []
+
 def readspmfdata(data):
     file = open(data)
     
@@ -40,37 +42,70 @@ class TV:
         for item in self.HeaderTable.keys():
             self.HeaderTable[item]['twu'] = 0
     
+    # insert the branch transaction into the TV tree
     def insertbranch(self, transaction, brau):
+        
+        #locate to the root of tree
         currentnode = self.root
+        
+        #obtain the utilities of the transaction
         utilities = np.array([item_u[0] for item_u in transaction])
+        
+        #calculate the twu of every itemset contained by this transaction
         twu = sum(utilities)
+        
+        #initialize the remain utility
         ru = 0
+        
+        #for every item in the transaction
         for item_u in transaction:
+            
+            #get the item name
             item = item_u[1]
             
+            #update the remain utility and twu of this item
+            #brau is the utility of the prefix itemset
             self.HeaderTable[item]['ru'] += ru
             self.HeaderTable[item]['twu'] += twu+brau
             ru += item_u[0]
+            
+            #if item is not the current node's children
             if item not in currentnode.childrennames:
+                
+                #build a new node
                 newnode = Node(item,brau,np.zeros(1),0,currentnode)
+                
+                #update the headertable
                 self.HeaderTable[item]['link'].append(newnode)
+                
+                #add the new node to the children of crrent node
                 currentnode.children.append(newnode)
                 currentnode.childrennames.append(item)
+                
+                #let the current node be the new node
                 currentnode = newnode
+                
+            #if the item is current node's children
             else:
                 for node in currentnode.children:
+                    
+                    #find such child node
                     if node.item == item:
+                        
+                        #the utility of prefix itemset
                         node.brau += brau
+                        
+                        #let the current node be the new node
                         currentnode = node
                         break
+                    
+        #if the current node has not upos
         if sum(currentnode.upos) == 0:
             currentnode.upos = utilities
         else:
             currentnode.upos = currentnode.upos+utilities
                 
 def construct_(tv, x, minutil):
-    if x == 'b':
-        is_here = 1
     HeaderTable = {}
     
     #build conditional transaction database and build HeaderTable
@@ -78,7 +113,10 @@ def construct_(tv, x, minutil):
     for node in tv.HeaderTable[x]['link']:
         
         #the branch utility of xP is the utility of x plus the utility of P in the branch
+        #the trans looks like [5, (1,'a'),(5,'b'), ...]
         trans = [node.upos[-1]+node.brau]
+        
+        #start to obtain the sub transaction based on the prefix xP
         currentnode = node
         idx = -1
         twu = sum(node.upos)+node.brau
@@ -89,6 +127,7 @@ def construct_(tv, x, minutil):
             item = currentnode.parent.item
             
             if item not in HeaderTable.keys():
+                #the utility is the utility of xP+item
                 HeaderTable[item] = {'utility':utility, 'twu':twu, 'ru':0, 'link':[]}
             else:
                 HeaderTable[item]['utility'] += utility
@@ -192,7 +231,8 @@ def mine(tv, P, minutil):
         utility = tv.HeaderTable[x]['utility']
         if utility >= minutil:
             #HUP.append((pat,utility))
-            print((pat, utility))
+            #print((pat, utility))
+            HUPs.append((pat, utility))
         if tv.HeaderTable[x]['ru']+utility<minutil:
             delete_nodes(tv, x)
         if tv.HeaderTable[x]['ru']+utility>=minutil:
@@ -203,25 +243,6 @@ def mine(tv, P, minutil):
     return 0
 
 def getHup(db, minutil):
+    HUPs.clear()
     tv = construct(db,minutil)
     mine(tv,[],minutil)
-
-test = [[(4,'a'),(2,'b'),(6,'c')],
-        [(4,'a'),(2,'b'),(3,'c'),(1,'d')],
-        [(2,'b'),(1,'d'),(1,'e')],
-        [(1,'d'),(1,'e')],
-        [(2,'a'),(4,'b'),(2,'e')],
-        [(6,'a')],
-        [(1,'d'),(1,'e')]
-        ]
-
-test2 = [[(2,'a'),(2,'b'),(4,'c'),(2,'d')],
-        [(4,'b')],
-        [(2,'a'),(4,'b'),(1,'d')],
-        [(2,'c')],
-        [(2,'a')],
-        [(4,'a'),(2,'c'),(3,'d')],
-        [(2,'a'),(2,'b'),(6,'c')]
-        ]
-
-getHup(test2,9)
