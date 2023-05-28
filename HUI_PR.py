@@ -4,11 +4,16 @@ Created on Tue May 23 17:37:08 2023
 
 @author: 张中杰
 """
+import getspmf
+
+HUPs = []
 
 def RecusiveSearch(alpha, alphaD, HeaderTable, ni, fi, minutil):
     for item in reversed(ni):
         beta = alpha + [item]
         
+        #the dict to store slocU, utility, ssubU and proD of every prefix + item
+        #Now the prefix utilities and projected database is stored in HeaderTable
         HeaderTable_ = {}
         
         for it in fi:
@@ -18,9 +23,10 @@ def RecusiveSearch(alpha, alphaD, HeaderTable, ni, fi, minutil):
                                 'proD': []}
         
         if HeaderTable[item]['utility'] >= minutil:
-            print(beta,HeaderTable[item]['utility'])
+            HUPs.append((beta,HeaderTable[item]['utility']))
         
         for idx in HeaderTable[item]['proD']:
+            #prUit is the utility of the prefix itemset in this transaction
             prUit = idx[0]
             idx_ = idx[1]
             trans = alphaD[idx_]
@@ -31,10 +37,14 @@ def RecusiveSearch(alpha, alphaD, HeaderTable, ni, fi, minutil):
                 if item_ == item:
                     break
                 elif item_ in fi:
+                    #the utility of prefix+item_ 
                     utility = trans[item_idx][0] + prUit
                     
+                    #the strict ru + utility of prefix + item_
                     HeaderTable_[item_]['ssubU'] += utility + ru
                     HeaderTable_[item_]['utility'] += utility
+                    
+                    #in the next recusive, prefix + item_ is the new prefix
                     HeaderTable_[item_]['proD'].append((utility, idx_))
                     
                     ru += trans[item_idx][0]
@@ -48,10 +58,10 @@ def RecusiveSearch(alpha, alphaD, HeaderTable, ni, fi, minutil):
         fibeta = list(filter(lambda x: HeaderTable_[x]['slocU'] >= minutil, fi))
         nibeta = list(filter(lambda x: HeaderTable_[x]['ssubU'] >= minutil, fi))
         RecusiveSearch(beta, alphaD, HeaderTable_, nibeta, fibeta, minutil)
-                    
-    return 0
 
-def HUI_PR(db, minutil):
+def getHup(db, minutil):
+    HUPs.clear()
+    
     #initialize the Counter to record locU, utility and subU of every item
     HeaderTable = {}
     
@@ -96,6 +106,8 @@ def HUI_PR(db, minutil):
             item = item_u[1]
             utility = item_u[0]
             HeaderTable[item]['subU'] += ru
+            
+            #(utility of the prefix itemset in this transaction, the id of this transaction)
             HeaderTable[item]['proD'].append((utility, i))
             ru += utility
     
@@ -108,28 +120,4 @@ def HUI_PR(db, minutil):
     #recusive mining the high utility itemset
     RecusiveSearch([], db, HeaderTable, ni, fi, minutil)  
 
-test = [[(4,'a'),(2,'b'),(6,'c')],
-        [(4,'a'),(2,'b'),(3,'c'),(1,'d')],
-        [(2,'b'),(1,'d'),(1,'e')],
-        [(1,'d'),(1,'e')],
-        [(2,'a'),(4,'b'),(2,'e')],
-        [(6,'a')],
-        [(1,'d'),(1,'e')]
-        ]
-
-test2 = [[(2,'a'),(2,'b'),(4,'c'),(2,'d')],
-        [(4,'b')],
-        [(2,'a'),(4,'b'),(1,'d')],
-        [(2,'c')],
-        [(2,'a')],
-        [(4,'a'),(2,'c'),(3,'d')],
-        [(2,'a'),(2,'b'),(6,'c')]
-        ]
-
-test3 = [[(5,'a'),(1,'c'),(2,'d')],
-         [(10,'a'),(6,'c'),(6,'e'),(5,'g')],
-         [(5,'a'),(4,'b'),(1,'c'),(12,'d'),(3,'e'),(5,'f')],
-         [(8,'b'),(3,'c'),(6,'d'),(3,'e')],
-         [(4,'b'),(2,'c'),(3,'e'),(2,'g')]]
-
-HUI_PR(test3, 25)      
+    
