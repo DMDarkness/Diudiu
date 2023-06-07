@@ -102,8 +102,12 @@ class TV:
         #if the current node has not upos
         if sum(currentnode.upos) == 0:
             currentnode.upos = utilities
+            # if sum(currentnode.upos) == 0:
+            #     print('first',currentnode.upos, currentnode.item, transaction, brau)
         else:
             currentnode.upos = currentnode.upos+utilities
+            # if sum(currentnode.upos) == 0:
+            #     print('first2',currentnode.upos, currentnode.item, transaction, brau)
                 
 def construct_(tv, x, minutil):
     HeaderTable = {}
@@ -211,38 +215,80 @@ def construct(db, minutil):
         transaction = [item_u for _, item_u in sorted(zip(indexes,transaction))]
         
         #insert a branch from selected items into TV.T
-        tv.insertbranch(transaction, 0)
+        if len(transaction)>0:
+            tv.insertbranch(transaction, 0)
         
     return tv
+
+theCount = []
 
 def delete_nodes(tv, x):
     for node in tv.HeaderTable[x]['link']:
         M = node.parent
+        # if M.item == '86':
+        #     print('fourth',node.item, M.item, node.upos, M.upos, len(theCount))
         if sum(M.upos) == 0:
             M.upos = node.upos[:-1]
+            # if len(M.upos) == 0:
+            #     print('second',node.upos, node.item, M.item, len(theCount))
         else:
             M.upos = M.upos+node.upos[:-1]
+            
+            # if len(M.upos) == 0:
+            #     print('third',node.upos, node.item)
         
     return 0
 
+def search(UL, IL, SUM, minutil, P, n):
+    if n >= len(IL):
+        HUPs.append((P, SUM))
+    else:
+        SUMP = SUM - UL[n]
+        if SUMP >= minutil:
+            search(UL, IL, SUMP, minutil, P, n+1)
+        PP = P + [IL[n]]
+        search(UL, IL, SUM, minutil, PP, n+1)
+
 def mine(tv, P, minutil):
+    theCount.append(1)
     for x in reversed(tv.SList):
         pat = P+[x]
         utility = tv.HeaderTable[x]['utility']
-        if utility >= minutil:
-            #HUP.append((pat,utility))
-            #print((pat, utility))
-            HUPs.append((pat, utility))
-        if tv.HeaderTable[x]['ru']+utility<minutil:
-            delete_nodes(tv, x)
-        if tv.HeaderTable[x]['ru']+utility>=minutil:
-            tv_ = construct_(tv, x, minutil)
-            if len(tv_.root.children) > 0:
-                mine(tv_, pat, minutil)
-            delete_nodes(tv, x)
+        if tv.HeaderTable[x]['ru']+utility >= minutil:
+            if len(tv.HeaderTable[x]['link']) == 1:
+                node = tv.HeaderTable[x]['link'][0]
+                #the branch utility of xP is the utility of x plus the utility of P in the branch
+                #the trans looks like [5, (1,'a'),(5,'b'), ...]
+                trans = [node.upos[-1]+node.brau]
+                
+                #start to obtain the sub transaction based on the prefix xP
+                currentnode = node
+                idx = -1
+                while currentnode.parent.item != 'root':
+                    idx = idx - 1
+                    item = currentnode.parent.item
+                    
+                    trans.insert(1,(node.upos[idx],item))
+                    currentnode = currentnode.parent
+                UL = [item_u[0] for item_u in trans[1:]]
+                IL = [item_u[1] for item_u in trans[1:]]
+                SUM = trans[0] + sum(UL)
+                search(UL, IL, SUM, minutil, pat, 0)
+            else:
+                if utility >= minutil:
+                    #HUP.append((pat,utility))
+                    #print((pat, utility))
+                    HUPs.append((pat, utility))
+                tv_ = construct_(tv, x, minutil)
+                if len(tv_.root.children) > 0:
+                    mine(tv_, pat, minutil)
+        delete_nodes(tv, x)
     return 0
 
 def getHup(db, minutil):
     HUPs.clear()
     tv = construct(db,minutil)
     mine(tv,[],minutil)
+
+
+
